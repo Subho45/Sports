@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  fullName      String
+  email         String   @unique
+  mobileNumber  String   @unique
+  password      String
+  role          String   @default("ATHLETE") // ATHLETE, COACH, ADMIN
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  otps          OTP[]
+  athletes      AthleteRegistration[]
+  coachProfile  CoachProfile?
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  code      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model CoachProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  qualifications  String
+  experienceYears Int
+  certifications  String
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AthleteRegistration {
+  id              String   @id @default(cuid())
+  userId          String?  // Optional for now to avoid breaking existing Phase 1 records
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  status          String   @default("PENDING_PAYMENT") // PENDING_PAYMENT, COMPLETED, VERIFIED, REJECTED
+
+  // Step 1: Personal Details
+  fullName        String
+  dob             String
+  age             Int
+  gender          String
+  bloodGroup      String
+  mobileNumber    String
+  email           String
+
+  // Step 2: Guardian Details
+  fatherName      String
+  motherName      String
+  guardianName    String?
+  guardianMobile  String
+  guardianEmail   String?
+
+  // Step 3: Address
+  address         String
+  city            String
+  state           String
+  pinCode         String
+  country         String   @default("India")
+
+  // Step 4: Club Details
+  clubName        String
+  stateRep        String
+  district        String
+  nocClubUrl      String?
+  nocStateUrl     String?
+
+  // Step 5: Competition Details
+  ageGroupApplied String
+  categoryLevel   String
+  events          String   // We will store as JSON string or comma-separated
+
+  // Step 6: Documents
+  passportPhotoUrl String
+  aadhaarUrl       String
+  dobProofUrl      String
+  bonafideUrl      String
+  
+  // Insurance
+  insuranceProvider String?
+  policyNumber      String?
+  insuranceExpiry   String?
+  insuranceDocUrl   String?
+
+  consentAgreed     Boolean @default(false)
+}

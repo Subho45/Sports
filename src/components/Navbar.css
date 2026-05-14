@@ -1,0 +1,100 @@
+/* Navbar Premium Animations & Layout */
+
+.navbar {
+  position: sticky; /* Changed from fixed to sticky to prevent content overlap */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+  padding: 1rem 0;
+  border-bottom: 1px solid transparent;
+}
+
+.navbar.scrolled {
+  padding: 0.75rem 0;
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Logo Animation */
+.navbar-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-accent {
+  transition: all var(--transition-micro);
+}
+
+.navbar-logo:hover .logo-accent {
+  text-shadow: 0 0 10px var(--primary);
+}
+
+/* Nav Links Animation */
+.nav-link {
+  position: relative;
+  transition: all var(--transition-micro);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-primary);
+  transition: width var(--transition-micro);
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Mobile Menu Animation (if needed) */
+@keyframes mobileMenuOpen {
+  0% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mobileMenuClose {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
