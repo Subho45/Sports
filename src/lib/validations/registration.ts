@@ -12,8 +12,8 @@ export const athleteRegistrationSchema = z.object({
   email: z.string().email("Invalid email address"),
 
   // Step 2: Guardian Details
-  fatherName: z.string().min(2, "Father's Name is required"),
-  motherName: z.string().min(2, "Mother's Name is required"),
+  fatherName: z.string().min(2, "Father's Name is required").optional().or(z.literal("")),
+  motherName: z.string().min(2, "Mother's Name is required").optional().or(z.literal("")),
   guardianName: z.string().optional(),
   guardianMobile: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits"),
   guardianEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -29,8 +29,8 @@ export const athleteRegistrationSchema = z.object({
   clubName: z.string().min(2, "Club Name is required"),
   stateRep: z.string().min(2, "State Representation is required"),
   district: z.string().min(2, "District is required"),
-  nocClubUrl: z.string().url("Must be a valid uploaded file URL").optional(),
-  nocStateUrl: z.string().url("Must be a valid uploaded file URL").optional(),
+  nocClubUrl: z.string().nullable().optional().or(z.literal("")),
+  nocStateUrl: z.string().nullable().optional().or(z.literal("")),
 
   // Step 5: Competition Details
   ageGroupApplied: z.string().min(1, "Age Group is required"),
@@ -51,6 +51,9 @@ export const athleteRegistrationSchema = z.object({
 
   // Step 7: Consent
   consentAgreed: z.boolean().refine((val) => val === true, "You must agree to the terms"),
+
+  // Payment Status
+  paymentStatus: z.string().optional(),
 });
 
 export type AthleteRegistrationInput = z.infer<typeof athleteRegistrationSchema>;

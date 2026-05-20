@@ -8,6 +8,7 @@ export default function AthleteDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [registrations, setRegistrations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSession();
@@ -29,6 +30,24 @@ export default function AthleteDashboard() {
       setLoading(false);
     }
   };
+
+  const fetchRegistrations = async () => {
+    try {
+      const res = await fetch('/api/athlete/registration');
+      const data = await res.json();
+      if (data.success) {
+        setRegistrations(data.registrations);
+      }
+    } catch (error) {
+      console.error("Failed to fetch registrations", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRegistrations();
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -74,9 +93,40 @@ export default function AthleteDashboard() {
 
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6">Recent Activities</h2>
-          <div className="glass-card p-4 text-center text-[var(--muted-foreground)] border border-dashed border-[var(--glass-border)]">
-            No registration history found. Complete your registration to see activities here.
-          </div>
+          {registrations.length === 0 ? (
+            <div className="glass-card p-4 text-center text-[var(--muted-foreground)] border border-dashed border-[var(--glass-border)]">
+              No registration history found. Complete your registration to see activities here.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {registrations.map(reg => (
+                <div key={reg.id} className="glass-card p-4 border border-[var(--glass-border)] flex justify-between items-center animate-slide-up">
+                  <div>
+                    <h3 className="font-semibold text-lg">{reg.fullName} - {reg.ageGroupApplied}</h3>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Submitted on {new Date(reg.createdAt).toLocaleDateString()} at {new Date(reg.createdAt).toLocaleTimeString()}
+                    </p>
+                    <p className="text-xs mt-1">Level: {reg.categoryLevel}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex gap-2 mb-2 justify-end">
+                      <span className={`status-badge ${reg.paymentStatus === 'PAID' ? 'approved' : 'pending'}`}>
+                        Payment: {reg.paymentStatus}
+                      </span>
+                      <span className={`status-badge ${reg.status.toLowerCase()}`}>
+                        Status: {reg.status}
+                      </span>
+                    </div>
+                    {reg.paymentStatus !== 'PAID' && (
+                      <Link href="/register" className="text-xs text-[var(--primary)] font-semibold hover:underline">
+                        Continue to Payment →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       

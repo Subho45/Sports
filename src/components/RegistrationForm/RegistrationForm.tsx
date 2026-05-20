@@ -93,7 +93,11 @@ export default function RegistrationForm() {
         {currentStep === 4 && <ClubDetails data={formData.club} onNext={(d: any) => handleNext(d, 'club')} onBack={handleBack} />}
         {currentStep === 5 && <CompetitionDetails data={formData.competition} onNext={(d: any) => handleNext(d, 'competition')} onBack={handleBack} />}
         {currentStep === 6 && <DocumentUpload data={formData.documents} onNext={(d: any) => handleNext(d, 'documents')} onBack={handleBack} />}
-        {currentStep === 7 && <Consent data={formData.consent} onNext={(d: any) => handleNext(d, 'consent')} onBack={handleBack} />}
+        {currentStep === 7 && <Consent data={formData.consent} onNext={(agreed: boolean, payLater?: boolean) => {
+          setFormData((prev: any) => ({ ...prev, consent: { agreed, payLater } }));
+          setCurrentStep(8);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }} onBack={handleBack} />}
         {currentStep === 8 && <Payment data={formData} onBack={handleBack} />}
       </div>
     </div>

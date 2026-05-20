@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
 
 interface ConsentProps {
-  data: boolean;
-  onNext: (data: boolean) => void;
+  data: any;
+  onNext: (data: boolean, payLater?: boolean) => void;
   onBack: () => void;
 }
 
 export default function Consent({ data, onNext, onBack }: ConsentProps) {
-  const [agreed, setAgreed] = useState(data || false);
+  const [agreed, setAgreed] = useState(data?.agreed || false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleChoice = (payLater: boolean) => {
     if (!agreed) {
       setError('You must agree to the terms and conditions to proceed.');
       return;
     }
-    onNext(agreed);
+    onNext(agreed, payLater);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-step">
+    <div className="form-step">
       <div style={{ background: 'rgba(0,0,0,0.2)', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--glass-border)' }}>
         <h3 style={{ marginBottom: '1rem' }}>Declaration & Consent</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -49,10 +48,17 @@ export default function Consent({ data, onNext, onBack }: ConsentProps) {
         {error && <p className="error-message" style={{ marginTop: '0.5rem' }}>{error}</p>}
       </div>
 
-      <div className="step-actions">
+      <div className="step-actions" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
         <button type="button" onClick={onBack} className="btn btn-outline">Back</button>
-        <button type="submit" className="btn btn-primary">Proceed to Payment</button>
+        <div style={{ display: 'flex', gap: '1rem', marginLeft: 'auto' }}>
+          <button type="button" onClick={() => handleChoice(true)} className="btn btn-secondary">
+            Submit & Pay Later
+          </button>
+          <button type="button" onClick={() => handleChoice(false)} className="btn btn-primary">
+            Continue for Payment
+          </button>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }

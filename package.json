@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "npx prisma db push",
+    "db:reset": "npx prisma db push --force-reset && npx prisma db seed",
+    "db:seed": "npx prisma db seed",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
@@ -36,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }

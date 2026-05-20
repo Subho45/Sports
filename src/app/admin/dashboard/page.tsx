@@ -6,14 +6,28 @@ import './admin.css';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('athletes');
+  const [activeTab, setActiveTab] = useState('overview');
   const [athletes, setAthletes] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAthlete, setSelectedAthlete] = useState<any>(null);
 
   useEffect(() => {
     fetchAthletes();
+    fetchActivities();
   }, []);
+
+  const fetchActivities = async () => {
+    try {
+      const res = await fetch('/api/admin/activities');
+      const data = await res.json();
+      if (data.success) {
+        setActivities(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch activities", error);
+    }
+  };
 
   const fetchAthletes = async () => {
     try {
@@ -67,6 +81,9 @@ export default function AdminDashboard() {
       <div className="admin-sidebar glass-card">
         <h2 style={{ padding: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--glass-border)', marginBottom: '1rem' }}>Admin Portal</h2>
         <nav className="admin-nav" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 60px)' }}>
+          <button className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+            Overview
+          </button>
           <button className={`nav-item ${activeTab === 'athletes' ? 'active' : ''}`} onClick={() => setActiveTab('athletes')}>
             Registered Athletes
           </button>
@@ -80,6 +97,51 @@ export default function AdminDashboard() {
       </div>
 
       <div className="admin-content">
+        {activeTab === 'overview' && (
+          <div className="tab-pane animate-fade-in">
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div className="stat-card glass-card p-6">
+                <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Total Athletes</h3>
+                <p className="text-3xl font-bold mt-2">{athletes.length}</p>
+              </div>
+              <div className="stat-card glass-card p-6">
+                <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Pending Approvals</h3>
+                <p className="text-3xl font-bold mt-2 text-[var(--warning)]">{athletes.filter(a => a.status === 'PENDING').length}</p>
+              </div>
+              <div className="stat-card glass-card p-6">
+                <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Verified Athletes</h3>
+                <p className="text-3xl font-bold mt-2 text-[var(--success)]">{athletes.filter(a => a.status === 'VERIFIED').length}</p>
+              </div>
+            </div>
+
+            <h2 className="mb-6">Recent Activity Feed</h2>
+            <div className="activity-feed space-y-4">
+              {activities.length === 0 ? (
+                <div className="glass-card p-8 text-center text-[var(--muted-foreground)]">
+                  No recent activities recorded.
+                </div>
+              ) : (
+                activities.map((activity, idx) => (
+                  <div key={idx} className="activity-item glass-card p-4 border border-[var(--glass-border)] flex items-center gap-4">
+                    <div className={`activity-icon ${activity.type.toLowerCase()}`} style={{ 
+                      width: '40px', height: '40px', borderRadius: '50%', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: activity.type === 'SIGNUP' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                      color: activity.type === 'SIGNUP' ? 'var(--primary)' : 'var(--success)'
+                    }}>
+                      {activity.type === 'SIGNUP' ? '👤' : '📝'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{activity.message}</p>
+                      <p className="text-xs text-[var(--muted-foreground)]">{new Date(activity.timestamp).toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'athletes' && (
           <div className="tab-pane animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -99,7 +161,7 @@ export default function AdminDashboard() {
                       <th>Name</th>
                       <th>Mobile</th>
                       <th>Age Group</th>
-                      <th>Competition</th>
+                      <th>Payment</th>
                       <th>Status</th>
                       <th>Action</th>
                     </tr>
@@ -107,7 +169,7 @@ export default function AdminDashboard() {
                   <tbody>
                     {athletes.length === 0 && (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>No athletes found in database.</td>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>No athletes found in database.</td>
                       </tr>
                     )}
                     {athletes.map(athlete => (
@@ -115,9 +177,13 @@ export default function AdminDashboard() {
                         <td><strong>{athlete.fullName}</strong></td>
                         <td>{athlete.mobileNumber}</td>
                         <td>{athlete.ageGroupApplied}</td>
-                        <td>{athlete.categoryLevel}</td>
                         <td>
-                          <span className={`status-badge ${athlete.status.toLowerCase().replace('_', '-')}`}>{athlete.status}</span>
+                          <span className={`status-badge ${athlete.paymentStatus === 'PAID' ? 'completed' : 'pending-payment'}`}>
+                            {athlete.paymentStatus === 'PAID' ? 'PAID' : 'PENDING'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${athlete.status.toLowerCase()}`}>{athlete.status}</span>
                         </td>
                         <td>
                           <button 
@@ -185,23 +251,44 @@ export default function AdminDashboard() {
               </div>
 
               <div style={{ gridColumn: 'span 2', marginTop: '1.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                <h3 style={{ marginBottom: '1rem' }}>Update Registration Status</h3>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <select 
-                    className="form-control" 
-                    style={{ maxWidth: '250px' }}
-                    value={selectedAthlete.status}
-                    onChange={(e) => handleStatusUpdate(selectedAthlete.id, e.target.value)}
-                  >
-                    <option value="PENDING_PAYMENT">Pending Payment</option>
-                    <option value="COMPLETED">Payment Completed</option>
-                    <option value="VERIFIED">Documents Verified</option>
-                    <option value="REJECTED">Registration Rejected</option>
-                  </select>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
-                    Current Status: <span className={`status-badge ${selectedAthlete.status.toLowerCase().replace('_', '-')}`}>{selectedAthlete.status}</span>
-                  </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ marginBottom: '0.5rem' }}>Application Management</h3>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <p style={{ fontSize: '0.875rem' }}>
+                        Payment: <span className={`status-badge ${selectedAthlete.paymentStatus === 'PAID' ? 'completed' : 'pending-payment'}`}>
+                          {selectedAthlete.paymentStatus}
+                        </span>
+                      </p>
+                      <p style={{ fontSize: '0.875rem' }}>
+                        Application: <span className={`status-badge ${selectedAthlete.status.toLowerCase()}`}>{selectedAthlete.status}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      className="btn btn-destructive"
+                      onClick={() => handleStatusUpdate(selectedAthlete.id, 'REJECTED')}
+                    >
+                      Reject Application
+                    </button>
+                    <button 
+                      className="btn btn-success"
+                      disabled={selectedAthlete.paymentStatus !== 'PAID'}
+                      onClick={() => handleStatusUpdate(selectedAthlete.id, 'VERIFIED')}
+                      title={selectedAthlete.paymentStatus !== 'PAID' ? "Cannot verify until payment is complete" : ""}
+                    >
+                      Verify & Accept
+                    </button>
+                  </div>
                 </div>
+                
+                {selectedAthlete.paymentStatus !== 'PAID' && (
+                  <p style={{ marginTop: '1rem', color: 'var(--warning)', fontSize: '0.85rem' }}>
+                    ⚠️ Note: You can only "Verify & Accept" an application after the user has completed the payment.
+                  </p>
+                )}
               </div>
 
 

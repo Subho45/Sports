@@ -1,86 +1,223 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
-// Email configuration
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp-relay.brevo.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
-const SMTP_USER = process.env.EMAIL_FROM || 'ab29b5001@smtp-brevo.com';
-const SMTP_PASS = process.env.BREVO_SMTP_KEY;
+/**
+ * =========================
+ * GOOGLE SMTP CONFIG
+ * =========================
+ * Make sure you use Gmail App Password (NOT normal password)
+ */
 
-// Create transporter
+const SMTP_USER = process.env.SMTP_USER; // yourgmail@gmail.com
+const SMTP_PASS = process.env.SMTP_PASS; // 16-digit app password
+
+if (!SMTP_USER || !SMTP_PASS) {
+  console.warn("⚠️ SMTP credentials are missing in environment variables.");
+}
+
+/**
+ * Create Nodemailer transporter
+ */
 const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: false, 
+  service: 'gmail',
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 5000,
 });
 
 /**
- * Sends a general HTML email.
+ * =========================
+ * 1. GENERIC EMAIL SENDER
+ * =========================
  */
-export const sendEmail = async (to: string, subject: string, html: string) => {
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  html: string
+) => {
   try {
-    if (!SMTP_PASS || !SMTP_USER) {
-      console.warn('⚠️ SMTP credentials missing! Mocking email.');
-      return { success: true, mocked: true };
+    if (!SMTP_USER || !SMTP_PASS) {
+      throw new Error("SMTP credentials missing");
     }
 
     const info = await transporter.sendMail({
-      from: `"SPORVIA Admin" <${SMTP_USER}>`,
+      from: `"SPORVIA" <${SMTP_USER}>`,
       to,
       subject,
       html,
     });
-    return { success: true, messageId: info.messageId };
+
+    console.log("📧 Email sent:", info.messageId);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
   } catch (error) {
-    console.error("❌ Error sending email:", error);
-    return { success: false, error };
+    console.error("❌ sendEmail error:", error);
+    return {
+      success: false,
+      error,
+    };
   }
 };
 
-
 /**
- * Sends an OTP verification email to the user.
+ * =========================
+ * 2. OTP EMAIL SENDER
+ * =========================
  */
-export const sendOTPVerificationEmail = async (email: string, otp: string) => {
+export const sendOTPVerificationEmail = async (
+  email: string,
+  otp: string
+) => {
   try {
-    // If credentials are missing, we still log but the user wants them in mail.
-    // If they are missing in the environment, this will fail.
-    if (!SMTP_PASS || !SMTP_USER) {
-      console.error('❌ SMTP credentials missing! Cannot send real email.');
-      console.log(`Fallback OTP for ${email}: ${otp}`);
-      return { success: false, error: 'Credentials missing' };
+    if (!SMTP_USER || !SMTP_PASS) {
+      throw new Error("SMTP credentials missing");
     }
 
     const info = await transporter.sendMail({
-      from: `"SPORVIA Admin" <${SMTP_USER}>`,
+      from: `"SPORVIA" <${SMTP_USER}>`,
       to: email,
-      subject: "Your SPORVIA Registration OTP",
-      text: `Welcome to SPORVIA! Your verification code is: ${otp}. This code is valid for 10 minutes.`,
+      subject: "Your OTP Verification Code",
+      text: `Your OTP is ${otp}. It is valid for 10 minutes.`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-          <h2 style="color: #1e3a8a; text-align: center;">Welcome to SPORVIA!</h2>
-          <p style="font-size: 16px; color: #333;">Thank you for starting your registration. Please use the following One-Time Password (OTP) to verify your email address:</p>
-          <div style="background-color: #f8fafc; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
-            <span style="font-size: 24px; font-weight: bold; color: #f97316; letter-spacing: 5px;">${otp}</span>
+        <div style="font-family: Arial; padding: 20px;">
+          <h2>Email Verification</h2>
+          <p>Please use the OTP below:</p>
+
+          <div style="font-size: 28px; font-weight: bold; color: #f97316; letter-spacing: 5px; text-align:center;">
+            ${otp}
           </div>
-          <p style="font-size: 14px; color: #64748b;">This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #94a3b8; text-align: center;">© ${new Date().getFullYear()} SPORVIA. All rights reserved.</p>
+
+          <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>
+
+          <hr />
+          <p style="font-size: 12px; color: gray;">
+            © ${new Date().getFullYear()} SPORVIA
+          </p>
         </div>
       `,
     });
 
-    console.log("✅ Email sent successfully:", info.messageId);
-    console.log(`[BACKUP] OTP for ${email} is: ${otp}`);
-    return { success: true, messageId: info.messageId };
+    console.log("✅ OTP email sent:", info.messageId);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
   } catch (error) {
-    console.error("❌ Error sending OTP email:", error);
-    return { success: false, error };
+    console.error("❌ OTP email error:", error);
+    return {
+      success: false,
+      error,
+    };
+  }
+};
+
+/**
+ * =========================
+ * 3. PAYMENT EMAIL SENDER
+ * =========================
+ */
+export const sendPaymentEmail = async (
+  email: string,
+  amount: number,
+  paymentId: string
+) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"SPORVIA Payments" <${SMTP_USER}>`,
+      to: email,
+      subject: "Payment Successful",
+      html: `
+        <div style="font-family: Arial; padding: 20px;">
+          <h2 style="color: green;">Payment Successful ✅</h2>
+
+          <p>Your payment was successful.</p>
+
+          <h3>Transaction Details:</h3>
+          <ul>
+            <li><b>Amount:</b> ₹${amount}</li>
+            <li><b>Payment ID:</b> ${paymentId}</li>
+            <li><b>Date:</b> ${new Date().toLocaleString()}</li>
+          </ul>
+
+          <p>Thank you for your payment.</p>
+
+          <hr />
+          <p style="font-size: 12px; color: gray;">
+            © ${new Date().getFullYear()} SPORVIA
+          </p>
+        </div>
+      `,
+    });
+
+    console.log("💳 Payment email sent:", info.messageId);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
+  } catch (error) {
+    console.error("❌ Payment email error:", error);
+    return {
+      success: false,
+      error,
+    };
+  }
+};
+
+/**
+ * =========================
+ * 4. REMINDER EMAIL SENDER
+ * =========================
+ */
+export const sendReminderEmail = async (
+  email: string,
+  name: string,
+  hours: number
+) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"SPORVIA Support" <${SMTP_USER}>`,
+      to: email,
+      subject: `Reminder: Complete your registration (${hours}h remaining)`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #f97316;">Registration Reminder ⏳</h2>
+          <p>Hi <b>${name}</b>,</p>
+          <p>We noticed you started your registration on SPORVIA but haven't completed the payment yet.</p>
+          <p>It's been ${hours} hours since you started. Please complete your payment to secure your spot in the competition.</p>
+          
+          <div style="margin: 20px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" 
+               style="background-color: #f97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+               Complete Registration Now
+            </a>
+          </div>
+
+          <p>If you have already paid, please ignore this email or contact support.</p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #666;">
+            © ${new Date().getFullYear()} SPORVIA. All rights reserved.
+          </p>
+        </div>
+      `,
+    });
+
+    console.log(`🔔 Reminder (${hours}h) email sent to ${email}:`, info.messageId);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
+  } catch (error) {
+    console.error("❌ Reminder email error:", error);
+    return {
+      success: false,
+      error,
+    };
   }
 };

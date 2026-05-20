@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     const validationResult = athleteRegistrationSchema.safeParse(body);
     
     if (!validationResult.success) {
+      console.error("❌ Registration Validation Failed:", JSON.stringify(validationResult.error.format(), null, 2));
       return NextResponse.json(
         { error: "Validation failed", details: validationResult.error.format() },
         { status: 400 }
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
         insuranceExpiry: data.insuranceExpiry,
         insuranceDocUrl: data.insuranceDocUrl,
         consentAgreed: data.consentAgreed,
+        status: "PENDING",
+        paymentStatus: data.paymentStatus || "PENDING",
       }
     });
 

@@ -12,6 +12,8 @@ export default function Payment({ data, onBack }: PaymentProps) {
   const [status, setStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [errorMsg, setErrorMsg] = useState('');
   const fee = 1500;
+  
+  const isPayLater = data.consent?.payLater === true;
 
   const handleSubmit = async () => {
     setProcessing(true);
@@ -28,7 +30,7 @@ export default function Payment({ data, onBack }: PaymentProps) {
         userId,
         fullName: data.personal?.fullName,
         dob: data.personal?.dob,
-        age: parseInt(data.personal?.age || '0', 10),
+        age: data.personal?.age ? parseInt(data.personal.age, 10) : 0,
         gender: data.personal?.gender,
         bloodGroup: data.personal?.bloodGroup,
         mobileNumber: data.personal?.mobile,
@@ -46,15 +48,15 @@ export default function Payment({ data, onBack }: PaymentProps) {
         pinCode: data.address?.pinCode,
         country: data.address?.country,
         
-        clubName: data.club?.clubName || 'Mock Club',
-        stateRep: data.club?.stateRep || 'Mock State',
-        district: data.club?.district || 'Mock District',
-        nocClubUrl: data.club?.nocFile,
-        nocStateUrl: data.club?.nocStateUrl,
+        clubName: data.club?.clubName || 'N/A',
+        stateRep: data.club?.stateRep || 'N/A',
+        district: data.club?.districtRep || 'N/A',
+        nocClubUrl: data.club?.nocFile || "",
+        nocStateUrl: "",
         
-        ageGroupApplied: data.competition?.ageGroupApplied || 'U-19',
-        categoryLevel: data.competition?.categoryLevel || 'Beginner',
-        events: data.competition?.events || ['100m Sprint'],
+        ageGroupApplied: data.competition?.ageGroup || 'Senior',
+        categoryLevel: data.competition?.category || 'Intermediate',
+        events: data.competition?.events || [],
         
         passportPhotoUrl: data.documents?.photo,
         aadhaarUrl: data.documents?.aadhaar,
@@ -66,7 +68,8 @@ export default function Payment({ data, onBack }: PaymentProps) {
         insuranceExpiry: data.documents?.insuranceExpiry,
         insuranceDocUrl: data.documents?.insuranceDoc,
         
-        consentAgreed: true, // Auto-agree for UI test if missed
+        consentAgreed: true,
+        paymentStatus: isPayLater ? "PENDING" : "PAID",
       };
       
       console.log("🚀 Submitting Registration Payload:", payload);
@@ -80,7 +83,16 @@ export default function Payment({ data, onBack }: PaymentProps) {
       const responseData = await res.json();
       
       if (!res.ok) {
-        throw new Error(responseData.error || 'Failed to submit registration');
+        let message = responseData.error || 'Failed to submit registration';
+        if (responseData.details) {
+          // Extract the first error message from Zod details if available
+          const firstErrorField = Object.keys(responseData.details).find(k => k !== '_errors');
+          if (firstErrorField) {
+            const fieldError = responseData.details[firstErrorField]._errors[0];
+            message = `${firstErrorField}: ${fieldError}`;
+          }
+        }
+        throw new Error(message);
       }
 
       setStatus('success');
@@ -100,8 +112,14 @@ export default function Payment({ data, onBack }: PaymentProps) {
     return (
       <div className="form-step" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-        <h2 style={{ color: 'var(--success)', marginBottom: '1rem' }}>Payment Successful!</h2>
-        <p style={{ color: 'var(--muted-foreground)' }}>Your registration is complete. Redirecting to your dashboard...</p>
+        <h2 style={{ color: 'var(--success)', marginBottom: '1rem' }}>
+          {isPayLater ? 'Registration Submitted!' : 'Payment Successful!'}
+        </h2>
+        <p style={{ color: 'var(--muted-foreground)' }}>
+          {isPayLater 
+            ? 'Your registration details are saved. Please complete the payment later to confirm.' 
+            : 'Your registration is complete. Redirecting to your dashboard...'}
+        </p>
       </div>
     );
   }
@@ -111,18 +129,25 @@ export default function Payment({ data, onBack }: PaymentProps) {
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <h3 style={{ color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>Total Registration Fee</h3>
         <h1 style={{ fontSize: '3rem', color: 'var(--foreground)' }}>₹{fee}</h1>
+        {isPayLater && (
+          <p style={{ color: 'var(--warning)', marginTop: '0.5rem', fontWeight: 500 }}>
+            Status: Payment Pending
+          </p>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '400px', margin: '0 auto' }}>
-        <p style={{ textAlign: 'center', fontWeight: 500, marginBottom: '1rem' }}>Complete Registration</p>
+        <p style={{ textAlign: 'center', fontWeight: 500, marginBottom: '1rem' }}>
+          {isPayLater ? 'Confirm Submission' : 'Complete Registration'}
+        </p>
         
         <button 
           onClick={handleSubmit} 
           disabled={processing}
-          className="btn btn-primary" 
+          className={`btn ${isPayLater ? 'btn-secondary' : 'btn-primary'}`}
           style={{ padding: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}
         >
-          {processing ? 'Submitting...' : 'Submit Registration to Database'}
+          {processing ? 'Submitting...' : (isPayLater ? 'Submit Registration' : 'Pay & Register')}
         </button>
       </div>
       
